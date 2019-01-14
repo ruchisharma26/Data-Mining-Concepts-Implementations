@@ -1,201 +1,486 @@
 ---
-title: "CS 422 Section 04"
+title: "CS 422"
 output: 
- html_notebook:
-   toc: yes
-   toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
 author: Ruchi Sharma
 ---
+##  Homework 4
+## Locality sensitive hashing
 
-## Problem 2.1
-# Problem 2.1 (a)
 ```{r}
-setwd("C:/Users/Ruchi Awasthi/Desktop/Masters/DM/Assignment 1")
-college.df = read.csv("College.csv", header=TRUE, ",")
-head(college.df, 6)
+library(tidyverse)
+setwd("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/ml-latest-small")
+data_rating <- read.csv("ratings.csv")
+data_movies <- read.csv("movies.csv")
+index1<-1
+index2<-""
+for(j in 1:nrow(data_rating))
+{
+  if(index1 !=data_rating[j,1])
+  {
+    index1 = data_rating[j,1]
+    path <- paste0("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/hw4.movies/user",data_rating[j-1,1],".txt")
+    write(index2,file=path,append=TRUE)
+    index2=""
+  }
+  index2<-paste0(index2,as.character(data_movies[which(data_movies$movieId==data_rating[j,2]),2]),"\n")
+}
+path <- paste0("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/hw4.movies/user",data_rating[j-1,1],".txt")
+write(index2,file=path,append=TRUE)  
+
+library(textreuse)
+library(stringr)
+library(stats)
+file<- list.files("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/hw4.movies/",full.names = T)
+corpus <- TextReuseCorpus(file, tokenizer = tokenize_ngrams, n = 5, keep_tokens = TRUE)
 ```
 
-#  Problem 2.1 (b) 
+
+
+##2.1 a.
 ```{r}
-data <- table(college.df$Private)
-print(data)
+temp_user <- paste0("user",1)
+characteristic_matrix <- tokens(corpus[[temp_user]])
+final <- c(unique(characteristic_matrix))
+for (i in 2:671){
+  temp_user <- paste0("user",i)
+  characteristic_matrix <- tokens(corpus[[temp_user]])
+  final <- c(final,characteristic_matrix)
+  final <- unique(final)
+}
+length(which(duplicated(final) == TRUE))
+length(final)
+columncount <- length(corpus)
+print (columncount)
 ```
 
-#  Problem 2.1 (C) 
-```{r}
-xname <- "PhD Holder"
-public.df <- dplyr::filter(college.df, Private== "No")
-private.df <- dplyr::filter(college.df, Private== "Yes")
-hist(public.df$PhD, xlab=xname, main = paste("Histogram of PhD Holder in Public College"), col="yellow", border="blue",  freq = FALSE)
-lines(density(public.df$PhD),col="red")
-hist(private.df$PhD, xlab=xname,  main = paste("Histogram of PhD Holder in Private College"), col="yellow", border="blue", freq = FALSE)
-lines(density(private.df$PhD),col="red")
-```
-#SO in 2.1 (C) by seeing the histogram i can comment that private colleges are top heavy with respect to PhD faculty
+##2.1(a.) The size of the characteristic matrix is 157727 (no of rows.) and 671 columns with 671 documents.
 
-#  Problem 2.1 (d)
+##2.1 (b.)
 ```{r}
-sorted_college.df <- dplyr::arrange(college.df, Grad.Rate)
-dplyr::select(head (sorted_college.df,n=5),Name,Grad.Rate )
-dplyr::select(tail (sorted_college.df, n=5),Name,Grad.Rate)
+str_count(corpus[["user20"]],pattern = "\n")
+head(corpus[["user20"]]$tokens[1:5])
 ```
-
-#  Problem 2.1 (e) i
+##2.1 b i) Usr 20 has rated 98 movies.
+## All top list is given in code output
 ```{r}
-summary(college.df)
+pair <- pairwise_candidates(pairwise_compare(corpus, jaccard_similarity))
+```
+## 2.1 (C)
+```{r}
+similarity_score1 <- c(which(pair$score >= 0.60))
+similarity_score2 <- c(which(pair$score >= 0.50))
+similarity_score3 <- c(which(pair$score >= 0.40))
+pair[similarity_score1,]
+pair[similarity_score2,]
+pair[similarity_score3,]
 ```
 
-#  Problem 2.1 (e) ii
+##2.1 C. observations
+##2.1 C (i) 
+##elements above similarity score of 0.60 = 0
+##2.1 C (ii) 
+##no elements above similarity score of 0.50 = 0
+## 2.1 c (iii) 
+##similarity score above 0.40 = 4 and pair can be seen the the result window
+
+
+##2.1 d. i, ii, iii
 ```{r}
-pairs(college.df[, 1:10])
+lsh_probability(h=18, b=9, s=0.60)
+minhash_gen<- minhash_generator(n=9, seed=100)
+recreated_corpus <- TextReuseCorpus(file, tokenizer = tokenize_ngrams, n = 5,
+                          minhash_func = minhash_gen, keep_tokens = TRUE)
+user20 <- recreated_corpus[["user20"]]
+head(recreated_corpus[["user20"]]$minhashes)
+tokens(user20)[1:5]
 ```
 
-#  Problem 2.1 (e) iii
-```{r}
-boxplot(perc.alumni~Private, data=college.df, main="Percentage Contribution OF Alumni", 
-  	xlab="Type of Colleges", ylab="Alumni Contribution Percentage", col =c("green", "blue"))
-```
-# So In 2.1 (e) iii: The alumni who go to private college donate more
+##2.1 d (i) 
+##Find the minimum number of minhash signatures = 18 and LSH bands =9 .
 
-#  Problem 2.1 (e) iV
-```{r}
-boxplot(PhD~Private, data=college.df, main="Contribution OF Alumni", 
-  	xlab="Type of Colleges", ylab="Donation By Alumni", col =c("green", "blue"))
-```
-# So In 2.1 (e)iV : Private colleges employ more PhD 
+##2.1 d (ii)
+## First five Minhash list can be seen in the code output
 
-#  Problem 2.1 (e) v
+
+##2.1 e i, ii, iii
 ```{r}
-Elite <- rep("No", nrow(college.df))
-Elite[college.df$Top10perc > 50] <- "Yes"
-Elite <- as.factor(Elite)
-college.df <- data.frame(college.df, Elite)
-summary(college.df$Elite)
+lsh_data <- lsh(recreated_corpus, bands = 9)
+lsh_candidates_pair <- lsh_candidates(lsh_data )
+compare <- lsh_compare(lsh_candidates_pair, recreated_corpus, jaccard_similarity)
 ```
 
-#  Problem 2.1 (e) vi
 ```{r}
-par(mfrow=c(2,2))
-hist(college.df$Top10perc, breaks=5)
-hist(college.df$Top10perc, breaks=10)
-hist(college.df$Top10perc, breaks=20)
-hist(college.df$Top10perc, breaks=40)
+similarity_score_1 <- c(which(compare$score >= 0.60))
+length(similarity_score_1 )
+similarity_score_2 <- c(which(compare$score >= 0.50))
+length(similarity_score_2 )
+```
+##2.1 e (i.) 
+##No, by seeing observations there is no candidate pairs with jaccard similarity between 0.5 and 0.6 using the LSH, because pairwise comparison in 2.1 (c) is showing computation with more rigidity. With no candidate pair in the range shows that even LSH would deduce no such pair.
+
+##2.1 e (ii.) 
+```{r}
+similarity_score_3 <- c(which(compare$score >= 0.40))
+compare[similarity_score_3 ,]
+```
+##2.1 e (iii.) 
+##Yes we can observe that the similarity scores is same as of 2.1 c (iv.)
+
+##2.1 e (iv.) 
+##The pairwise comparisons computed 224785 comparisons and LSH computed 18175 comparisons. The percent work saved using LSH is 91.91%.
+
+###2.2 Content Based Recommendation System
+
+##The modulo operation to my user ID = 630
+##Building user profile for user 630.  
+
+# selecting all movie id for user id = 630
+
+```{r}
+library(sqldf)
+setwd("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/ml-latest-small")
+##setting the data
+data_rating <- read.csv("ratings.csv")
+data_movies <- read.csv("movies.csv")
+rate_movie<- left_join(data_rating, data_movies, by="movieId")
+##all user of user id = 630
+user630 <- sqldf(x = "select * from data_rating where userid = '630'")
+user630
+```
+# getting data for CWID modulo 671= 630
+```{r}
+movieuser630 <- sqldf(x = "select * from rate_movie where userId = '630'")
+movieuser630
 ```
 
-#  Problem 2.1 (e) vii
-```{r}
-print("From observation we find that priavte college employ more PhD people,
-      There is a college Albertson College, which takes more number of applications.")
-```
 
-##Poblem 2.2
 
-#Problem 2.2 (a) i
 ```{r}
-setwd("C:/Users/Ruchi Awasthi/Desktop/Masters/DM/Assignment 1")
-auto.df = read.csv("auto-mpg.csv", header=TRUE, ",")
-which(auto.df$horsepower=="?")
-auto.df <- auto.df [-c(33,127,331,337,355,375)]
-```
+genre_data <- as.data.frame(movieuser630$genres, stringsAsFactors=FALSE)
+library(data.table)
+df.genre <- as.data.frame(tstrsplit(genre_data[,1], '[|]', type.convert=TRUE), stringsAsFactors=FALSE)
 
-#Problem 2.2 (a) ii
-```{r}
-str(auto.df)
-auto.df$horsepower <- as.integer(auto.df$horsepower)
-str(auto.df)
-```
+genre_data_list <- c("Action", "Adventure", "Animation", "Children", "Comedy", "Crime","Documentary", "Drama", "Fantasy","Film-Noir", "Horror", "IMAX", "Musical", "Mystery","Romance","Sci-Fi", "Thriller", "War", "Western", "(no genres listed)")
 
-#Problem 2.2 (b) 
-```{r}
-psych::pairs.panels(auto.df)
-model <- lm(mpg ~ weight, data=auto.df)
-summary(model)
-RSS_Value <- c(crossprod(model$residuals))
-MSE_Value <- RSS_Value/ length(model$residuals)
-RMSE_Value <- sqrt(MSE_Value)
-print(RMSE_Value)
-```
+matrix_of_genre <- matrix(0,nrow(movieuser630)+1,20)
+matrix_of_genre[1,] <- genre_data_list 
+colnames(matrix_of_genre) <- genre_data_list 
+for (i in 1:nrow(movieuser630)) {
+ for (c in 1:ncol(df.genre)) {
+ matrix_col = which(matrix_of_genre[1,] == df.genre[i,c])
+ matrix_of_genre[i+1,matrix_col] <- 1
+ }
+}
 
-#Problem 2.2 (c) 
-```{r}
-plot(model)
-```
+second_matrix <- as.data.frame(matrix_of_genre[-1,], stringsAsFactors=FALSE) 
+for (c in 1:ncol(second_matrix)) {
+  second_matrix[,c] <- as.integer(second_matrix[,c])
+} #convert from characters to integers
+second_matrix <- data.frame(user630$movieId, second_matrix)
+second_matrix["Total", ] <- colSums(second_matrix)
+second_matrix$user630.movieId[nrow(second_matrix)] <- NA
 
-#Problem 2.2 (d) i
-```{r}
-set.seed(1122)
-index <- sample(1:nrow(auto.df), 0.80*dim(auto.df)[1])
-train.df <- auto.df[index, ]
-test.df <- auto.df[-index, ]
-model1 <- lm(mpg ~ .-car.name, data=train.df)
-print ("Car name is an independent variable, it would not help us to get any mpg")
-```
+options(digits = 2)
+dataframeUser <- second_matrix[nrow(second_matrix),]/155.00000
+dataframeUser
 
-#Problem 2.2 (d) ii
-```{r}
-summary(model)
-RSS_Val <- c(crossprod(model1$residuals))
-MSE_Val <- RSS_Value/ length(model1$residuals)
-RMSE_Val <- sqrt(MSE_Value)
-print (RMSE_Val)
-```
+second_matrix["Avg",] <- dataframeUser
 
-#Problem 2.2 (e) i
-```{r}
-library(leaps)
-best.model <- regsubsets(mpg~ . -car.name, auto.df, nvmax=3, really.big	= TRUE)
-mod <- lm(mpg ~ weight + model.year+ origin  , data=auto.df)
-```
+second_matrix
 
-#Problem 2.2 (e) ii
-```{r}
-summary (mod)
-RSS <- c(crossprod(mod$residuals))
-MSE <- RSS/ length(mod$residuals)
-RMSE <- sqrt(MSE)
-print (RMSE)
-```
 
-#Problem 2.2 (f)
-```{r}
-plot(mod$residuals)
-```
-#Problem 2.2 (g)
-```{r}
-hist(mod$residuals, ylab="Residuals", col="yellow", border="blue", freq = FALSE)
-print("No, It does not follow Gaussian distribution. It is just a Normal distribution")
-```
+write.csv(second_matrix, "profileofuser.csv")
+profileofuser <-read.csv("profileofuser.csv", sep=",", header=T)
 
-#Problem 2.2 (h)
-```{r}
-Pred <- predict(mod, test.df)
-actuals_preds <- data.frame(cbind(actuals=test.df$mpg, predicteds=Pred)) 
-actuals_preds$mpg <- test.df$mpg
-actuals_preds
-equality <-actuals_preds$mpg[actuals_preds$predicted == actuals_preds$mpg]
-equality
+userprof <- as.vector(profileofuser[nrow(profileofuser), ])
+userprof <- userprof[,3:22]
+userprof<-as.vector(userprof)
+userprof <- apply(X=userprof,2,mean)
 ```
-#Problem 2.2 (i)
+##Building a movie profile
+
 ```{r}
-err <- actuals_preds$predicted - actuals_preds$mpg
-error <- err^2
-totalerror <- actuals_preds$mpg - mean(actuals_preds$mpg)
+library(lsa)
+data_frame <- data_movies[sample(nrow(data_movies),10),]
+data_frame
 
-#1.
-rss <- sum(error)
-print( rss)
-#2
-tss <- sum(totalerror^2)
-print(tss)
-#3
-Fstat <- ((tss-rss)/3)/(rss/nrow(actuals_preds)-3-1)
-print(Fstat)
-#4
-rse<- sqrt(sum(error)/length(error))
-print(rse)
-#RMSE
-rmse <- sqrt(mean(error))
-print(rmse)
+genres <- as.data.frame(data_frame$genres, stringsAsFactors=FALSE)
+library(data.table)
+data_frame.genre <- as.data.frame(tstrsplit(genres[,1], '[|]', type.convert=TRUE), stringsAsFactors=FALSE)
 
-```
+genre_data_list <- c("Action", "Adventure", "Animation", "Children", "Comedy", "Crime","Documentary", "Drama", "Fantasy","Film-Noir", "Horror", "IMAX", "Musical", "Mystery","Romance","Sci-Fi", "Thriller", "War", "Western", "(no genres listed)")
+
+matrix_of_genre <- matrix(0,nrow(data_frame)+1,20)
+matrix_of_genre[1,] <- genre_data_list #set first row to genre list
+colnames(matrix_of_genre) <- genre_data_list 
+for (i in 1:nrow(data_frame)) {
+ for (c in 1:ncol(data_frame.genre)) {
+ matrix_col = which(matrix_of_genre[1,] == data_frame.genre[i,c])
+ matrix_of_genre[i+1,matrix_col] <- 1
+ }
+}
+
+second_matrix <- as.data.frame(matrix_of_genre[-1,], stringsAsFactors=FALSE) 
+for (c in 1:ncol(second_matrix)) {
+  second_matrix[,c] <- as.integer(second_matrix[,c])
+} 
+second_matrix <- data.frame(data_frame$movieId, second_matrix)
+
+second_matrix
+
+write.csv(second_matrix, "profileofmovie.csv")
+profileofmovie <-read.csv("profileofmovie.csv", sep=",", header=T)
+
+movie_data<-as.vector(profileofmovie[,3:22])
+output<-data.frame(10,0)
+for (i in 1:10) 
+{
+  mov<-movie_data[i,]
+  temp <- apply(X=mov,2,mean)
+  output[i,]<-cosine(userprof,temp)
  
+}
+
+similiarityres <- data.frame(data_frame$movieId, data_frame$title, output)
+
+similiarityres <- similiarityres[,1:3]
+colnames(similiarityres)[1]<- paste("MovieId")
+colnames(similiarityres)[2]<-paste("MovieName")
+colnames(similiarityres)[3]<- paste("Similarites")
+
+fianlsim <- similiarityres[order(similiarityres$Similarites, decreasing = TRUE),]
+
+cat("user ID 630 picked 10 movies")
+data_frame$movieId
+cat("Of these, the following 5 movies are recommended")
+head(fianlsim,5)
+```
+
+###2.3 Collaborative Filtering 
+##2.3 a) and B) user-user and item-item similarity:
+
+```{r}
+rm(list=ls())
+setwd("C:/Users/Ruchi Awasthi/Desktop/Assignment 4/ml-latest-small")
+ratings_data <- read.csv("ratings.csv", sep=",")
+idVector <- c("513","317","415","375","64","556","82","225","657","266","568","50")
+jacsimVector <- c("0.4358974","0.4033613","0.3255814","0.3049645","0.2753623","0.2727273","0.2527473","0.2420382","0.2262774","0.2216216","0.2105263","0.2009804")
+datafarme1 <- data.frame(matrix(ncol = 2, nrow =12))
+datafarme1$X1 = idVector
+datafarme1$X2 = jacsimVector
+
+##generating 5 random user as asked
+random_user <- sample(datafarme1$X1, 5)
+random5 <- random_user
+random_user <- c(random_user, 191)
+index <- which(ratings_data$userId == 191)
+user191 <- ratings_data[index,]$movieId
+utilityMatrix <- data.frame(matrix("NA", ncol = 29, nrow = length(random_user)), stringsAsFactors = FALSE)
+rownames(utilityMatrix) <- c(random_user)
+colnames(utilityMatrix) <- c(user191)
+
+##creating utility matrix
+for(inde in random_user)
+{
+  userMovies <- ratings_data[which(ratings_data$userId == inde),]$movieId
+  userRatings <- subset(ratings_data, ratings_data$userId == inde)
+  union_mov <- intersect(user191, userMovies)
+  
+  for(j in union_mov)
+  {
+    utilityMatrix[toString(inde),toString(j)] <- userRatings[which(userRatings$movieId == j), 3]
+  }
+}
+
+
+randfive_dataframe <- data.frame(matrix(ncol = 2, nrow =5))
+vectoroffour <- c()
+vectoroffour <- c(vectoroffour, utilityMatrix["191","150"])
+vectoroffour <- c(vectoroffour, utilityMatrix["191","296"])
+vectoroffour <- c(vectoroffour, utilityMatrix["191","380"])
+vectoroffour <- c(vectoroffour, utilityMatrix["191","590"])
+vectoroffour
+randfive_dataframe$X1 <- random5
+for(inde in randfive_dataframe$X1)
+{
+  randfive_dataframe$X2[which(randfive_dataframe$X1 == inde)] <- datafarme1$X2[which(datafarme1$X1 == inde)]
+}
+randfive_dataframe <- randfive_dataframe[order(randfive_dataframe$X2, decreasing = TRUE),]
+top3Dataframe <- head(randfive_dataframe, 3)
+finalRMSE<- data.frame(matrix(ncol = 1, nrow=4))
+top3Dataframe[3,2]
+denomirator <- as.numeric(top3Dataframe[1,2])+as.numeric(top3Dataframe[2,2])+as.numeric(top3Dataframe[3,2])
+val <- 0.0000
+val2 <- 0.0000
+var3 <- 1
+data_makeup<- data.frame(matrix(ncol = 2, nrow=4))
+data_makeup$X1<- c(150,296,380,590)
+for(inde in data_makeup$X1){
+  for(j in top3Dataframe$X1){
+   val <- val + as.numeric(utilityMatrix[toString(j),toString(inde)]) * as.double(top3Dataframe$X2[top3Dataframe$X1==j])
+  }
+  data_makeup$X2[data_makeup$X1==inde] <- val / denomirator
+  fivedata <- (((val/denomirator)-as.numeric(vectoroffour[var3]))) * ((val/denomirator)-as.numeric(vectoroffour[var3]))
+  finalRMSE$X1[var3] <- fivedata
+  
+  var3 <- var3+1
+  val<-0
+}
+cat("User ID 191, 5 random user IDs:", random5,"\n")
+cat("Using user-user similarity, User ID 191 will rate the movies as follows:", "\n")
+data_makeup <- rbind(data_makeup,c("RMSE",sqrt(sum(finalRMSE$X1)/4)))
+data_makeup
+
+
+
+### 2.3 b) Calculating Item Item Similarity
+
+# b)
+random_item <- sample(datafarme1$X1,5)
+rand_five_item <- random_item
+random_item <- c(random_item, 191)
+utility_matrix_item <- data.frame(matrix(NA, ncol = 6, nrow = 29), stringsAsFactors = FALSE)
+rownames(utility_matrix_item) <- c(user191)
+colnames(utility_matrix_item) <- c(random_item)
+for(inde in random_item)
+{
+  Item <- ratings_data[which(ratings_data$userId == inde),]$movieId
+  ratingsOfUserItem <- subset(ratings_data, ratings_data$userId == inde)
+  unionOfMovie <- intersect(user191, Item)
+  
+  for(j in unionOfMovie)
+  {
+    utility_matrix_item[toString(j),toString(inde)] <- ratingsOfUserItem[which(ratingsOfUserItem$movieId == j), 3]
+   
+  }
+}
+util_item_copy <- utility_matrix_item
+utility_matrix_item["150", "191"] <- NA
+utility_matrix_item["296", "191"] <- NA
+utility_matrix_item["380", "191"] <- NA
+utility_matrix_item["590", "191"] <- NA
+meanofDataFrame <- apply(utility_matrix_item, 1, function(x) mean(x, na.rm=T))
+vect <- c()
+for(inde in meanofDataFrame)
+{
+  vect <- c(vect, inde)
+}
+vect[5]
+index = 1
+for(inde in user191)
+{
+  for(j in random_item)
+  {
+    if(!is.na(utility_matrix_item[toString(inde),toString(j)]))
+    {
+      utility_matrix_item[toString(inde),toString(j)] = utility_matrix_item[toString(inde),toString(j)] - vect[index]
+      
+    }
+  }
+  index = index + 1
+}
+utility_matrix_item
+for(inde in unionOfMovie){
+  for(j in random_item){
+    if(is.na(utility_matrix_item[toString(inde),toString(j)])){
+      utility_matrix_item[toString(inde),toString(j)] <-   0
+    }
+  }
+}
+
+cosine_sim <- function(x,y){
+  sum(x*y)/(norm(x,type = "2") * norm(y,type = "2"))
+}
+
+
+valuesForCosine  <- data.frame(matrix(NA, nrow=29,ncol=4), stringsAsFactors = FALSE)
+colnames(valuesForCosine) <- c(150,296,380,590)
+rownames(valuesForCosine) <- c(user191)
+givesUserId <- c(150,296,380,590)
+
+for (inde in givesUserId)
+{
+   for (j in unionOfMovie) {
+     valuesForCosine[toString(j),toString(inde)] <- cosine_sim(as.numeric(c(utility_matrix_item[toString(inde),])),as.numeric(c(utility_matrix_item[toString(j),])))
+  }
+}
+for (inde in unionOfMovie)
+{
+  f = 0
+  for(j in givesUserId)
+  {
+    if(!is.na(valuesForCosine[toString(inde),toString(j)]))
+    {
+      f = 1
+    }
+  }
+  if(f == 0)
+    valuesForCosine[toString(inde),] < - c(0.00, 0.00, 0.00)
+}
+
+##Calculating item item similiarty for users
+user_150 <- data.frame(matrix(ncol = 2, nrow=29))
+colnames(user_150) <- c("MovieID","Cosinevalue") 
+rownames(user_150) <- c(user191)
+user_150$MovieID <- user191
+user_150$Cosinevalue <- valuesForCosine$`150`
+user_150 <- user_150[order(user_150$Cosinevalue,decreasing = TRUE),]
+numerator <- (user_150[2,2] * util_item_copy[toString(user_150[2,1]), "191"]) + (user_150[3,2] * util_item_copy[toString(user_150[3,1]), "191"]) + (user_150[4,2] * util_item_copy[toString(user_150[4,1]), "191"])
+denomirat <- user_150[2,2] + user_150[3,2] + user_150[4,2]
+user_mov_rat1 <- numerator / denomirat
+
+user_296 <- data.frame(matrix(ncol = 2, nrow=29))
+colnames(user_296) <- c("MovieID","Cosinevalue") 
+rownames(user_296) <- c(user191)
+user_296$MovieID <- user191
+user_296$Cosinevalue <- valuesForCosine$`296`
+user_296 <- user_296[order(user_296$Cosinevalue,decreasing = TRUE),]
+numerator <- (user_296[2,2] * util_item_copy[toString(user_296[2,1]), "191"]) + (user_296[3,2] * util_item_copy[toString(user_296[3,1]), "191"]) + (user_296[4,2] * util_item_copy[toString(user_296[4,1]), "191"])
+denomirat <- user_296[2,2] + user_296[3,2] + user_296[4,2]
+user_mov_rat2 <- numerator / denomirat
+
+user_380 <- data.frame(matrix(ncol = 2, nrow=29))
+colnames(user_380) <- c("MovieID","Cosinevalue") 
+rownames(user_380) <- c(user191)
+user_380$MovieID <- user191
+user_380$Cosinevalue <- valuesForCosine$`380`
+user_380 <- user_380[order(user_380$Cosinevalue,decreasing = TRUE),]
+numerator <- (user_380[2,2] * util_item_copy[toString(user_380[2,1]), "191"]) + (user_380[3,2] * util_item_copy[toString(user_380[3,1]), "191"]) + (user_380[4,2] * util_item_copy[toString(user_380[4,1]), "191"])
+denomirat <- user_380[2,2] + user_380[3,2] + user_380[4,2]
+user_mov_rat3 <- numerator / denomirat
+
+user_590 <- data.frame(matrix(ncol = 2, nrow=29))
+colnames(user_590) <- c("MovieID","Cosinevalue") 
+rownames(user_590) <- c(user191)
+user_590$MovieID <- user191
+user_590$Cosinevalue <- valuesForCosine$`590`
+user_590 <- user_590[order(user_590$Cosinevalue,decreasing = TRUE),]
+numerator <- (user_590[2,2] * util_item_copy[toString(user_590[2,1]), "191"]) + (user_590[3,2] * util_item_copy[toString(user_590[3,1]), "191"]) + (user_590[4,2] * util_item_copy[toString(user_590[4,1]), "191"])
+denomirat <- user_590[2,2] + user_590[3,2] + user_590[4,2]
+user_mov_rat4 <- numerator / denomirat
+finalRMSE <- data.frame(matrix(ncol = 1, nrow=4))
+rownames(finalRMSE) <- c(150,296,380,590)
+cal1 <- ((user_mov_rat1-util_item_copy["150", "191"]) * (user_mov_rat1-util_item_copy["150", "191"]))
+finalRMSE[toString(150),]<-cal1
+cal2 <- ((user_mov_rat2-util_item_copy["296", "191"]) * (user_mov_rat2-util_item_copy["296", "191"]))
+finalRMSE[toString(296),]<-cal2
+cal3 <- ((user_mov_rat3-util_item_copy["380", "191"]) * (user_mov_rat3-util_item_copy["380", "191"]))
+finalRMSE[toString(380),]<-cal3
+cal4 <- ((user_mov_rat4-util_item_copy["590", "191"]) * (user_mov_rat4-util_item_copy["590", "191"]))
+finalRMSE[toString(590),]<-cal4
+rmse <- sqrt(sum(finalRMSE)/4)
+##output format
+cat("User ID 191, 5 random user IDs:", rand_five_item, "\n")
+cat("Using user-user similarity, User ID 191 will rate the movies as follows:", "\n")
+cat("150:", user_mov_rat1, "\n" )
+cat("296:", user_mov_rat2, "\n")
+cat("380:", user_mov_rat3, "\n")
+cat("590:",user_mov_rat4, "\n")
+cat("RMSE:" , rmse, "\n")
+
+```
+
+
