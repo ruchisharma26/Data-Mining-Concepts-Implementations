@@ -1,0 +1,290 @@
+---
+title: "CS 422"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Ruchi Sharma
+---
+
+## Homework 3
+## Part 2.1  K-means clustering
+
+
+```{r}
+setwd("C:/Users/Ruchi Awasthi/Desktop/Masters/DM/Assignment 3")
+orig_data <- read.table(file = "file19.txt",sep = "",comment.char = "#",header = T) 
+dataset <- write.csv(orig_data,file = "Mammal_file.csv")
+
+cleaneddata <- read.csv("Mammal_file.csv",sep = ",")
+cleaneddata <- cleaneddata[,-1] 
+```
+##2.1 (a.) i
+##As all the 9 attributes of data set seem good enough for performing clustering. I have used read.table function to read the data from file 19 and then have written it into CSV format in Mammal_file.csv , While reading the csv file i have removed Name attribute because it is not numeric and wont contribute in clustering.
+##2.1 (a.) ii
+##There is no need to perform standardization on data as all the attributes in have numeric value and all show quantitative nature. 
+##2.1 (a.) ii
+## I have done data cleaning using above code and the file has been attached with the homework.
+
+##2.1 (b) i 
+```{r}
+library(factoextra)
+library(cluster)
+library(fpc)
+fviz_nbclust(cleaneddata[2:9], kmeans, method="wss")
+fviz_nbclust(cleaneddata[2:9], kmeans, method="silhouette")
+```
+## Using WSS there are 7 clusters and using silhouette it is 10 and i am using WSS and using 7 as number of clusters because it does not generate any outliers which is good.
+
+##2.1 (b) ii
+```{r}
+KmeanCluster <- kmeans(cleaneddata[2:9], centers = 7,nstart = 25)
+fviz_cluster(KmeanCluster, data=cleaneddata[2:9])
+print(KmeanCluster)
+```
+##2.1 (b) iii
+##Number of Observations in clusters are 19, 1, 9, 17, 8, 2, 10
+
+## 2.1 (b) iv, v
+```{r}
+KmeanCluster$tot.withinss
+KmeanCluster$withinss
+KmeanCluster$totss
+```
+## 2.1 (b) iv, v Observations
+##Total Sum of Squares of cluster 568.303
+##SSE of each cluster 23.473684  0.000000  1.555556 20.705882  6.375000  3.000000 21.100000
+
+## 2.1 (b) vi
+```{r}
+which(KmeanCluster$cluster == 1)
+which(KmeanCluster$cluster == 2)
+which(KmeanCluster$cluster == 3)
+which(KmeanCluster$cluster == 4)
+which(KmeanCluster$cluster == 5)
+which(KmeanCluster$cluster == 6)
+which(KmeanCluster$cluster == 7)
+```
+##After analysing animal kingdom
+##Cluster 1 contains rabbits and groundhogs and rats
+##clusters 2 is a single element which contains 8 top molars and 8 bottom molars
+##cluster 3 contains bigger animals such as deer.
+##Cluster 4 Contains badgers and seals and almost collection of almost all the animals
+##Cluster 5 Contains bats and peccary
+##Cluster 6 Contains Seals and walrus it also contains two mammals with average number of 2 lower incisors, 1 canine , 4 premolars and no molars
+## Cluster 7 consists of mainly moles
+##some animmals like  armadillo are outliers So they form different clusters.
+
+##2.2 Hierarchical clustering
+```{r}
+data <- read.csv("Mammal_file.csv", sep = ",", comment.char = "#", header = T)
+cleanData<- data[,-1]
+print(cleanData)
+
+set.seed(1122)
+sampledData <- dplyr::sample_n(cleanData, 35) 
+rownames(sampledData) <- sampledData$Name
+sampledData <- sampledData[2:9]
+```
+##2.2 a
+```{r}
+library(factoextra)
+library(cluster)
+hc_single <- eclust(sampledData, "hclust", hc_method="single")
+fviz_dend(hc_single, palette="lancet", as.ggplot=T)
+fviz_cluster(hc_single, data=sampledData)
+
+hc_complete <- eclust(sampledData, "hclust", hc_method="complete")
+fviz_dend(hc_complete, palette="lancet", as.ggplot=T)
+fviz_cluster(hc_complete, data=sampledData)
+
+hc_average <- eclust(sampledData, "hclust", hc_method="average")
+fviz_dend(hc_average, palette="lancet", as.ggplot=T)
+fviz_cluster(hc_average, data=sampledData)
+```
+## 2.2 (b.) Two Singleton Clusters
+## For Single Linkage Two Singleton Clusters:
+##{Ground hog, Prarie dog}
+##{Elk, Reindeer}
+##{Ocelot, Jaguar}
+##{Badger, Skunk}
+##{Silver hair bat, Lump nose bat}
+
+##For Complete Linkage Two Singleton Clusters:
+##{Ground hog, Prarie dog}
+##{Sea lion, Elephant seal}
+##{Ocelot, Jaguar}
+##{Badger, Skunk}
+##{Racoon, Star nose mole}
+##{Elk, Reindeer}
+##{Hoary Bat,Pigmy bat}
+##{Silver hair bat, Lump nose bat}
+
+##For Average Linkage Two Singleton Clusters:
+##{Ground hog, Prarie dog}
+##{Racoon, Star nose mole}
+##{Sea lion, Elephant seal}
+##{Ocelot, Jaguar}
+##{Badger, Skunk}
+##{Silver hair bat, Lump nose bat}
+##{Hoary bat, Pygmy bat}
+##{Elk, Reindeer}
+
+##2.2 (c)
+##Among all the linkages, Single Linkage is the purest one as purity is defined as as the linkage strategy that produces the least two-singleton clusters.
+
+## 2.2 d
+```{r}
+cut_cluster <- cutree(hc_single,h = 2) 
+table(cut_cluster, row.names(sampledData))
+```
+## 2.2 (d) Observations
+## we would get 5 clusters using height =2.
+
+## 2.2 (e)
+```{r}
+hc_new_complete <- eclust(sampledData, "hclust",k = 5, hc_method="complete")
+fviz_dend(hc_new_complete, palette="lancet", as.ggplot=T)
+
+hc_new_single <- eclust(sampledData, "hclust",k = 5, hc_method="single")
+fviz_dend(hc_new_single, palette="lancet", as.ggplot=T)
+
+hc_new_average <- eclust(sampledData, "hclust",k = 5, hc_method="average")
+fviz_dend(hc_new_average, palette="lancet", as.ggplot=T)
+```
+## 2.2 (f.)
+```{r}
+
+library(fpc)
+st_single <- cluster.stats(dist(sampledData),hc_new_single$cluster , silhouette = TRUE)
+st_single$avg.silwidth
+st_single$dunn
+```
+##silhouette width for single cluster = .444
+##dunn index for single cluster = .447
+
+```{r}
+st_complete <- cluster.stats(dist(sampledData),hc_new_complete$cluster)
+st_complete$avg.silwidth
+st_complete$dunn
+```
+##silhouette width for complete cluster = .3985
+##dunn index for single cluster = .3651
+
+```{r}
+st_average <- cluster.stats(dist(sampledData),hc_new_average$cluster)
+st_average$avg.silwidth
+st_average$dunn
+```
+##silhouette width for complete cluster = 0.4133
+##dunn index for single cluster = 0.42
+
+##2.2 (g)
+##By looking into the data we can see that silhouette and dunn index widh is maximum for Single linkage so it is best stratgy
+
+## 2.3 K-Means and PCA
+```{r}
+pulsar_cand_data  <- read.csv("HTRU_2-small.csv",sep = ",", comment.char = '#')
+pulsar.pca  <- prcomp(scale(pulsar_cand_data[,1:8]))
+pulsar.pca
+summary(pulsar.pca)
+plot(pulsar.pca$x[,1:2],col = c("red","green"), pch =20, xlab ="PC1", ylab="PC2", main = "Plot for 2 Principal Components")
+```
+##2.3 (a) i
+##cummulative variance explained by first two components = 78.55 %
+
+##2.3 (a) iii
+## After using PCA, we can say that  class 1(green) record have relatively lower side in terms of  mean and std.dev values, and class 0(red colour) has high mean and std.dev values. This is also forming cluster with yellow consisting of class label 0 and green as class lable 1
+
+## 2.3 b (i)
+```{r}
+scl_pulsar <- scale(pulsar_cand_data[,1:8])
+pul_kmeans <- kmeans(scl_pulsar,centers = 2,nstart = 25)
+print(pulsar.pca)
+fviz_cluster(pul_kmeans, data=scl_pulsar[,1:8],geom = "point",main = " kmeans cluster vs scaled pulsar dataset")
+```
+## 2.3 b. (ii) observations
+## The two clusters have similar shape, because the former is plotting 2 principal component and the clustering kmeans algorithm also plots 2 reduced dimensions reflecting the class labels.
+
+##2.3 b iii
+```{r}
+pul_kmeans$size
+```
+## Distribution observation in each cluster is Class 0: 8847 and Class 1: 1153
+
+## 2.3 b iv
+```{r}
+table(pulsar_cand_data$class)
+```
+##distribution of the classes in the HTRU2 dataset Class 0: 9041 and Class 1: 959
+
+##2.3 b (v)
+##from above observations, Cluster 1 (zero)is majority class and cluster 2(one) is minority class
+
+##2.3 b vi
+```{r}
+large <- c(which(pul_kmeans$cluster == 1))
+new_data_pulsar <- pulsar_cand_data[c(large),]
+class_0 <- c(which(new_data_pulsar$class == 0))
+class_1 <- c(which(new_data_pulsar$class == 1))
+NROW(class_0)
+NROW(class_1)
+```
+##number of class 0 in larger cluster = 8624
+##number of class 1 in larger cluster = 223
+
+##2.3 b vii
+## Based on larger cluster, we can see that 8624 records classify as class 0 and 223 as class 1 records.
+##The larger cluster represents class 0 of the data set.
+
+##2.3 b viii
+```{r}
+clusplot(pulsar_cand_data[,1:8],pul_kmeans$cluster )
+v<-(pul_kmeans$betweenss/pul_kmeans$totss)
+print(v)
+```
+##The clustering explains 0.3586788 variance.
+
+##2.3 b ix
+```{r}
+hrtu_dis <- dist(scale(pulsar_cand_data[,1:8]))
+hrtu_Analysis<- cluster.stats(hrtu_dis, clustering = pul_kmeans$cluster)
+cat("Average Silhouette width = ", hrtu_Analysis$avg.silwidth)
+```
+##The average Silhouette Width for both the cluster is 0.6006794
+
+##2.3 b x
+```{r}
+stats_pulsar <- silhouette (pul_kmeans$cluster, dist = dist(scl_pulsar))
+summary(stats_pulsar)
+hrtu_Analysis$clus.avg.silwidths
+```
+##The Silhouette Width for larger cluster is 0.6590 and for smaller cluster is 0.151.
+##Based on the Silhouette Width, the larger cluster has higher index. Hence the larger cluser is better.
+
+##2.3 c i
+```{r}
+pca_pul <- pulsar.pca $x[,1:2]
+kmeans_pca <- kmeans(pca_pul,centers = 2,nstart = 25)
+kmeans_pca
+fviz_cluster(kmeans_pca, data=pca_pul,geom = "point",main = "Plot for kmeans-Principal Components data on Pulsar dataset")
+```
+
+```{r}
+stats_pulsar_pca <- cluster.stats(dist(pulsar.pca$x[,1:2]), kmeans_pca$cluster)
+stats_pulsar_pca$avg.silwidth
+```
+##2.3 c. (i.) observations
+## If we see the plot, it is almost same  to the plots from a(ii) and b(i). it all shows that they represent the distribution of points in two clusters.
+
+##2.3 c. (ii.)
+##The average Silhouette Width of both the clusters is 0.6826.
+
+##2.3 c. (iii.)
+##The Silhouette Width for the larger cluster is 0.7003 and for the lower cluster is 0.44890. Based on this stats, the larger cluster with 9296 0bservation is better
+.
+
+##2.3 c. (iv.)
+##After the second iteration of k-means, the clusters are being classified better. This is also observed in the values, and this shows that the data points are being re-classified correctly. But at the same time based on the classification of the class labels, the ratio is similar 
+
+
